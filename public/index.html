@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KORD-AI WhatsApp Authentication</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: rgba(22, 27, 34, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            background: linear-gradient(45deg, #58a6ff, #88ccff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: rgba(13, 17, 23, 0.8);
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input::placeholder {
+            color: rgba(201, 209, 217, 0.5);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 15px rgba(88, 166, 255, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(45deg, #58a6ff, #4b8cf4);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(88, 166, 255, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid #f85149;
+            color: #f85149;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .alert.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        .result-container {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: rgba(13, 17, 23, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(88, 166, 255, 0.1);
+            display: none;
+        }
+
+        .result-container.visible {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>KORD-AI WhatsApp Authentication</h1>
+        <form id="pairingForm">
+            <div class="input-group">
+                <input type="tel" id="phoneNumber" placeholder="WhatsApp number (e.g. +2349067339193)" required>
+            </div>
+            <button type="submit" id="submitButton">Get Pairing Code</button>
+        </form>
+        <div id="error" class="alert"></div>
+        
+        <div id="resultContainer" class="result-container">
+            <div id="resultText"></div>
+        </div>
+    </div>
+
+    <script>
+        function validatePhoneNumber(phone) {
+    const cleanedPhone = phone.replace(/[^\d+]/g, '');
+    
+    const phoneRegex = /^(\+)?[1-9]\d{1,2}\d{7,14}$/;
+    
+    return phoneRegex.test(cleanedPhone);
+}
+
+function formatPhoneNumber(phone) {
+    phone = phone.replace(/[^\d+]/g, '');
+    
+    if (phone.startsWith('+')) {
+        phone = phone.slice(1);
+    }
+    
+    return phone;
+}
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('visible');
+            setTimeout(() => {
+                errorDiv.classList.remove('visible');
+            }, 5000);
+        }
+
+        function showResult(message) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultText = document.getElementById('resultText');
+            resultText.textContent = message;
+            resultContainer.classList.add('visible');
+        }
+
+        document.getElementById('pairingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const phoneInput = document.getElementById('phoneNumber');
+            let phoneNumber = phoneInput.value.trim();
+
+            if (!validatePhoneNumber(phoneNumber)) {
+                showError('Please enter a valid phone number with country code');
+                return;
+            }
+
+            phoneNumber = formatPhoneNumber(phoneNumber);
+
+            const submitButton = document.getElementById('submitButton');
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Processing <span class="spinner"></span>';
+            
+            // Reset UI elements
+            document.getElementById('error').classList.remove('visible');
+            document.getElementById('resultContainer').classList.remove('visible');
+
+            try {
+                const response = await fetch(`/api/?number=${(phoneNumber)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.code) {
+                    showResult(`Pairing Code: ${data.code}`);
+                    submitButton.innerHTML = 'Pairing Code Generated';
+                } else {
+                    throw new Error(data.error || 'Failed to get pairing code');
+                }
+
+            } catch (error) {
+                showError(error.message);
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Get Pairing Code';
+            }
+        });
+    </script>
+</body>
+          </html>
